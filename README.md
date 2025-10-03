@@ -1,73 +1,164 @@
-# Welcome to your Lovable project
+# E-Commerce Admin Dashboard
 
-## Project info
+A modern, feature-rich admin dashboard for managing your e-commerce platform. Built with React, TypeScript, Tailwind CSS, and ready to connect to Supabase.
 
-**URL**: https://lovable.dev/projects/cd85edb1-5873-4a94-b6fe-f020afb29e89
+## 🚀 Features
 
-## How can I edit this code?
+- **Modern UI/UX**: Beautiful gradient design with smooth animations
+- **Dark/Light Mode**: Full theme support with toggle
+- **Product Management**: Complete CRUD operations for products
+- **Responsive Design**: Works perfectly on desktop and tablet
+- **Supabase Ready**: Pre-configured client and schema files
+- **Type-Safe**: Full TypeScript support
 
-There are several ways of editing your application.
+## 📋 Pages
 
-**Use Lovable**
+1. **Dashboard**: Overview with quick stats and recent activity
+2. **Products**: Full product management with table, search, filters, and forms
+3. **Orders**: Order tracking and management (placeholder)
+4. **Users**: Customer management (placeholder)
+5. **Settings**: Configuration and preferences
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/cd85edb1-5873-4a94-b6fe-f020afb29e89) and start prompting.
+## 🛠️ Tech Stack
 
-Changes made via Lovable will be committed automatically to this repo.
+- **Framework**: React 18 + Vite
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS + shadcn/ui
+- **Routing**: React Router v6
+- **State Management**: React Query
+- **Backend**: Supabase (not connected)
 
-**Use your preferred IDE**
+## 📦 Installation
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
+1. Clone the repository:
+```bash
 git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
 cd <YOUR_PROJECT_NAME>
+```
 
-# Step 3: Install the necessary dependencies.
-npm i
+2. Install dependencies:
+```bash
+npm install
+```
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+3. Set up environment variables:
+```bash
+cp .env.example .env
+```
+
+4. Add your Supabase credentials to `.env`:
+```env
+VITE_SUPABASE_URL=your_supabase_url_here
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key_here
+```
+
+5. Start the development server:
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## 🗄️ Database Setup
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### 1. Create a Supabase Project
 
-**Use GitHub Codespaces**
+1. Go to [https://supabase.com](https://supabase.com)
+2. Create a new project
+3. Wait for the project to be ready
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### 2. Run the Schema
 
-## What technologies are used for this project?
+1. Open the SQL Editor in your Supabase dashboard
+2. Copy the contents of `schema.sql`
+3. Execute the SQL script
+4. Verify tables are created: `products`, `orders`, `users`
 
-This project is built with:
+### 3. (Optional) Seed Data
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+1. Update the Supabase credentials in `seed.ts`
+2. Run the seed script:
+```bash
+npx ts-node seed.ts
+```
 
-## How can I deploy this project?
+## 🔑 Environment Variables
 
-Simply open [Lovable](https://lovable.dev/projects/cd85edb1-5873-4a94-b6fe-f020afb29e89) and click on Share -> Publish.
+Create a `.env` file with:
 
-## Can I connect a custom domain to my Lovable project?
+```env
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
+```
 
-Yes, you can!
+Get these values from:
+- Supabase Dashboard → Settings → API
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## 📁 Project Structure
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+```
+src/
+├── components/
+│   ├── layout/           # Layout components (Sidebar, Header)
+│   ├── products/         # Product-related components
+│   └── ui/              # shadcn/ui components
+├── pages/               # Page components
+├── lib/                 # Utilities and Supabase client
+└── index.css           # Global styles and design tokens
+```
+
+## 🎨 Design System
+
+The dashboard uses a modern design system with:
+
+- **Primary Color**: Purple gradient (`#8B5CF6` → `#3B82F6`)
+- **Semantic Tokens**: All colors defined in `index.css`
+- **Animations**: Smooth transitions and hover effects
+- **Shadows**: Elegant shadows with glow effects
+
+## 🔐 Security Notes
+
+- Never commit `.env` to version control
+- Keep your Supabase keys secure
+- Review RLS policies before deployment
+- Use environment variables for all secrets
+
+## 📝 CRUD Operations
+
+The `lib/supabase.ts` file includes helper functions:
+
+### Products
+- `productService.getProducts(filters?)` - Get all products
+- `productService.getProduct(id)` - Get single product
+- `productService.addProduct(product)` - Create new product
+- `productService.updateProduct(id, updates)` - Update product
+- `productService.deleteProduct(id)` - Delete product
+- `productService.uploadImage(file)` - Upload product image
+
+### Orders & Users
+- `orderService.getOrders()` - Get all orders
+- `userService.getUsers()` - Get all users
+
+## 🚧 Roadmap
+
+- [ ] Connect to live Supabase instance
+- [ ] Implement real-time updates
+- [ ] Add order management features
+- [ ] Add user authentication
+- [ ] Add analytics dashboard
+- [ ] Add export functionality
+- [ ] Add bulk operations
+
+## 📄 License
+
+This project is open source and available under the MIT License.
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## 📧 Support
+
+For support, email your-email@example.com or open an issue.
+
+---
+
+Built with ❤️ using React + Supabase
