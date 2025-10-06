@@ -3,31 +3,47 @@ import {
   LayoutDashboard, 
   Package, 
   ShoppingCart, 
-  Users, 
+  Users,
+  Calendar,
   Settings,
   ChevronLeft
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { usePermissions } from '@/hooks/usePermissions';
 
 interface SidebarProps {
   collapsed: boolean;
   onToggle: () => void;
+  mobileMenuOpen: boolean;
+  setMobileMenuOpen: (open: boolean) => void;
 }
 
 const navigation = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'Products', href: '/products', icon: Package },
-  { name: 'Orders', href: '/orders', icon: ShoppingCart },
-  { name: 'Users', href: '/users', icon: Users },
-  { name: 'Settings', href: '/settings', icon: Settings },
+  { name: 'Dashboard', href: '/', icon: LayoutDashboard, permission: 'canViewDashboard' },
+  { name: 'Products', href: '/products', icon: Package, permission: 'canViewProducts' },
+  { name: 'Orders', href: '/orders', icon: ShoppingCart, permission: 'canViewOrders' },
+  { name: 'Events', href: '/events', icon: Calendar, permission: 'canViewEvents' },
+  { name: 'Users', href: '/users', icon: Users, permission: 'canViewUsers' },
+  { name: 'Settings', href: '/settings', icon: Settings, permission: 'canViewSettings' },
 ];
 
-export function Sidebar({ collapsed, onToggle }: SidebarProps) {
+export function Sidebar({ collapsed, onToggle, mobileMenuOpen, setMobileMenuOpen }: SidebarProps) {
+  const permissions = usePermissions();
+
+  // Filter navigation based on permissions
+  const filteredNavigation = navigation.filter(item => {
+    if (item.permission === 'canViewDashboard') return true; // Dashboard is always visible
+    return permissions[item.permission as keyof typeof permissions];
+  });
+
   return (
     <aside
       className={cn(
         'fixed left-0 top-0 z-40 h-screen border-r border-border bg-sidebar transition-all duration-300',
-        collapsed ? 'w-16' : 'w-64'
+        'lg:translate-x-0',
+        collapsed ? 'w-16' : 'w-64',
+        // Mobile menu
+        mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
       )}
     >
       <div className="flex h-full flex-col">
@@ -41,7 +57,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           <button
             onClick={onToggle}
             className={cn(
-              'rounded-lg p-2 hover:bg-sidebar-accent transition-colors',
+              'rounded-lg p-2 hover:bg-sidebar-accent transition-colors hidden lg:block',
               collapsed && 'mx-auto'
             )}
           >
@@ -56,11 +72,12 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
         {/* Navigation */}
         <nav className="flex-1 space-y-1 p-3">
-          {navigation.map((item) => (
+          {filteredNavigation.map((item) => (
             <NavLink
               key={item.name}
               to={item.href}
               end={item.href === '/'}
+              onClick={() => setMobileMenuOpen(false)}
               className={({ isActive }) =>
                 cn(
                   'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all',
@@ -68,7 +85,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                   isActive
                     ? 'bg-gradient-primary text-white shadow-glow'
                     : 'text-sidebar-foreground',
-                  collapsed && 'justify-center'
+                  collapsed && 'lg:justify-center'
                 )
               }
               title={collapsed ? item.name : undefined}

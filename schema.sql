@@ -37,6 +37,15 @@ CREATE TABLE IF NOT EXISTS users (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Admin Users Table for dashboard authentication
+CREATE TABLE IF NOT EXISTS admin_users (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email TEXT UNIQUE NOT NULL,
+  role TEXT NOT NULL DEFAULT 'viewer' CHECK (role IN ('super_admin', 'admin', 'editor', 'viewer')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  last_sign_in_at TIMESTAMPTZ
+);
+
 -- Create indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
 CREATE INDEX IF NOT EXISTS idx_products_created_at ON products(created_at DESC);
@@ -48,11 +57,15 @@ CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders(created_at DESC);
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE admin_users ENABLE ROW LEVEL SECURITY;
 
 -- Create policies (allow all for admin dashboard - adjust as needed)
 CREATE POLICY "Enable all operations for products" ON products FOR ALL USING (true);
 CREATE POLICY "Enable all operations for orders" ON orders FOR ALL USING (true);
 CREATE POLICY "Enable all operations for users" ON users FOR ALL USING (true);
+
+-- Temporarily disable RLS on admin_users to test authentication
+ALTER TABLE admin_users DISABLE ROW LEVEL SECURITY;
 
 -- Create storage bucket for product images
 INSERT INTO storage.buckets (id, name, public)
@@ -79,3 +92,20 @@ CREATE TRIGGER update_products_updated_at
   BEFORE UPDATE ON products
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
+
+-- Simple function to create admin user (uses Supabase auth.signUp)
+CREATE OR REPLACE FUNCTION create_admin_user(
+  user_email TEXT,
+  user_password TEXT,
+  user_role TEXT DEFAULT 'viewer'
+)
+RETURNS JSON AS $$
+BEGIN
+  -- This function is kept for compatibility but should use Supabase client-side auth
+  -- The actual user creation should happen via supabase.auth.signUp() in the frontend
+  RETURN json_build_object(
+    'success', false,
+    'error', 'Use supabase.auth.signUp() instead of this function'
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;

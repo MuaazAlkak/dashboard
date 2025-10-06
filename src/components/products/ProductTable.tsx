@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Edit, Trash2, MoreVertical, ExternalLink } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Edit, Trash2, MoreVertical, ExternalLink, Loader2 } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -18,72 +18,56 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { ProductFormDialog } from './ProductFormDialog';
 import { DeleteProductDialog } from './DeleteProductDialog';
-import { Product } from '@/lib/supabase';
+import { Product, productService } from '@/lib/supabase';
+import { toast } from 'sonner';
+import { usePermissions } from '@/hooks/usePermissions';
 
 interface ProductTableProps {
   searchQuery: string;
   categoryFilter: string;
 }
 
-// Mock data - replace with actual Supabase query
-const mockProducts: Product[] = [
-  {
-    id: '1',
-    slug: 'wireless-headphones-pro',
-    title: { en: 'Wireless Headphones Pro' },
-    description: { en: 'Premium wireless headphones' },
-    price: 29999,
-    currency: 'USD',
-    stock: 150,
-    category: 'Electronics',
-    tags: ['audio', 'wireless'],
-    images: ['https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300'],
-    created_at: '2024-01-15T10:00:00Z',
-    updated_at: '2024-01-15T10:00:00Z',
-  },
-  {
-    id: '2',
-    slug: 'smart-watch-fitness',
-    title: { en: 'Smart Watch Fitness Tracker' },
-    description: { en: 'Advanced smartwatch' },
-    price: 19999,
-    currency: 'USD',
-    stock: 200,
-    category: 'Wearables',
-    tags: ['fitness', 'smartwatch'],
-    images: ['https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300'],
-    created_at: '2024-01-16T10:00:00Z',
-    updated_at: '2024-01-16T10:00:00Z',
-  },
-  {
-    id: '3',
-    slug: 'laptop-backpack-leather',
-    title: { en: 'Premium Leather Laptop Backpack' },
-    description: { en: 'Handcrafted leather backpack' },
-    price: 14999,
-    currency: 'USD',
-    stock: 75,
-    category: 'Accessories',
-    tags: ['bags', 'leather'],
-    images: ['https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=300'],
-    created_at: '2024-01-17T10:00:00Z',
-    updated_at: '2024-01-17T10:00:00Z',
-  },
-];
-
 export function ProductTable({ searchQuery, categoryFilter }: ProductTableProps) {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
+  const [debouncedSearch, setDebouncedSearch] = useState(searchQuery);
+  const permissions = usePermissions();
 
-  // Filter products based on search and category
-  const filteredProducts = mockProducts.filter((product) => {
-    const matchesSearch = product.title.en
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase());
-    const matchesCategory =
-      categoryFilter === 'all' || product.category === categoryFilter;
-    return matchesSearch && matchesCategory;
-  });
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 300); // 300ms delay
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Fetch products from Supabase
+  const fetchProducts = async () => {
+    setIsLoading(true);
+    try {
+      const data = await productService.getProducts({
+        search: debouncedSearch,
+        category: categoryFilter,
+      });
+      setProducts(data);
+    } catch (error: any) {
+      toast.error(`Failed to load products: ${error.message}`);
+      console.error('Error fetching products:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProducts();
+  }, [debouncedSearch, categoryFilter]);
+
+  const handleProductUpdated = () => {
+    fetchProducts();
+  };
 
   const formatPrice = (price: number, currency: string) => {
     return new Intl.NumberFormat('en-US', {
@@ -98,56 +82,73 @@ export function ProductTable({ searchQuery, categoryFilter }: ProductTableProps)
     return 'default';
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center rounded-lg border border-border bg-card py-12 shadow-elegant">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <>
-      <div className="rounded-lg border border-border bg-card shadow-elegant">
+      <div className="rounded-lg border border-border bg-card shadow-elegant overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className="w-[80px]">Image</TableHead>
-              <TableHead>Product</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Price</TableHead>
-              <TableHead>Stock</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="w-[80px]">Actions</TableHead>
+              <TableHead className="w-[60px] sm:w-[80px]">Image</TableHead>
+              <TableHead className="min-w-[150px]">Product</TableHead>
+              <TableHead className="hidden md:table-cell">Category</TableHead>
+              <TableHead className="min-w-[100px]">Price</TableHead>
+              <TableHead className="hidden sm:table-cell">Stock</TableHead>
+              <TableHead className="hidden lg:table-cell">Status</TableHead>
+              {(permissions.canEditProducts || permissions.canDeleteProducts) && (
+                <TableHead className="w-[60px] sm:w-[80px]">Actions</TableHead>
+              )}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredProducts.map((product) => (
+            {products.map((product) => (
               <TableRow
                 key={product.id}
                 className="group transition-all hover:bg-muted/50"
               >
                 <TableCell>
-                  <img
-                    src={product.images[0]}
-                    alt={product.title.en}
-                    className="h-12 w-12 rounded-lg object-cover shadow-sm"
-                  />
+                  {product.images[0] ? (
+                    <img
+                      src={product.images[0]}
+                      alt={product.title.en}
+                      className="h-10 w-10 rounded-lg object-cover shadow-sm sm:h-12 sm:w-12"
+                    />
+                  ) : (
+                    <div className="h-10 w-10 rounded-lg bg-muted sm:h-12 sm:w-12" />
+                  )}
                 </TableCell>
                 <TableCell>
                   <div>
-                    <p className="font-medium text-foreground">
+                    <p className="font-medium text-foreground text-sm sm:text-base">
                       {product.title.en}
                     </p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs text-muted-foreground sm:text-sm">
                       {product.slug}
                     </p>
+                    <div className="mt-1 flex flex-wrap gap-1 md:hidden">
+                      <Badge variant="outline" className="text-xs">{product.category}</Badge>
+                    </div>
                   </div>
                 </TableCell>
-                <TableCell>
+                <TableCell className="hidden md:table-cell">
                   <Badge variant="outline">{product.category}</Badge>
                 </TableCell>
-                <TableCell className="font-medium">
+                <TableCell className="font-medium text-sm sm:text-base">
                   {formatPrice(product.price, product.currency)}
                 </TableCell>
-                <TableCell>
-                  <span className="text-muted-foreground">
+                <TableCell className="hidden sm:table-cell">
+                  <span className="text-muted-foreground text-sm">
                     {product.stock} units
                   </span>
                 </TableCell>
-                <TableCell>
+                <TableCell className="hidden lg:table-cell">
                   <Badge variant={getStockBadgeVariant(product.stock)}>
                     {product.stock === 0
                       ? 'Out of Stock'
@@ -156,44 +157,50 @@ export function ProductTable({ searchQuery, categoryFilter }: ProductTableProps)
                       : 'In Stock'}
                   </Badge>
                 </TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 opacity-0 transition-opacity group-hover:opacity-100"
-                      >
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem>
-                        <ExternalLink className="mr-2 h-4 w-4" />
-                        View Details
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => setEditingProduct(product)}
-                      >
-                        <Edit className="mr-2 h-4 w-4" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="text-destructive"
-                        onClick={() => setDeletingProduct(product)}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
+                {(permissions.canEditProducts || permissions.canDeleteProducts) && (
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem>
+                          <ExternalLink className="mr-2 h-4 w-4" />
+                          View Details
+                        </DropdownMenuItem>
+                        {permissions.canEditProducts && (
+                          <DropdownMenuItem
+                            onClick={() => setEditingProduct(product)}
+                          >
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit
+                          </DropdownMenuItem>
+                        )}
+                        {permissions.canDeleteProducts && (
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => setDeletingProduct(product)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                )}
               </TableRow>
             ))}
           </TableBody>
         </Table>
 
-        {filteredProducts.length === 0 && (
+        {products.length === 0 && (
           <div className="py-12 text-center">
             <p className="text-muted-foreground">No products found</p>
           </div>
@@ -205,6 +212,7 @@ export function ProductTable({ searchQuery, categoryFilter }: ProductTableProps)
         product={editingProduct}
         open={!!editingProduct}
         onOpenChange={(open) => !open && setEditingProduct(null)}
+        onSuccess={handleProductUpdated}
       />
 
       {/* Delete Dialog */}
@@ -212,6 +220,7 @@ export function ProductTable({ searchQuery, categoryFilter }: ProductTableProps)
         product={deletingProduct}
         open={!!deletingProduct}
         onOpenChange={(open) => !open && setDeletingProduct(null)}
+        onSuccess={handleProductUpdated}
       />
     </>
   );
