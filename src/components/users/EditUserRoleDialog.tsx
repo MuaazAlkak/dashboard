@@ -46,8 +46,9 @@ export function EditUserRoleDialog({
       toast.success('User role updated successfully');
       onSuccess?.();
       onOpenChange(false);
-    } catch (error: any) {
-      toast.error(`Failed to update user role: ${error.message}`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Failed to update user role: ${errorMessage}`);
     } finally {
       setIsLoading(false);
     }

@@ -111,4 +111,36 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground;
   }
+
+  /* RTL Support */
+  [dir="rtl"] {
+    direction: rtl;
+  }
+
+  [dir="rtl"] .text-left {
+    text-align: right;
+  }
+
+  [dir="rtl"] .text-right {
+    text-align: left;
+  }
+}
+
+/* Component-level tweaks */
+@layer components {
+  /* Color date input calendar icon based on theme for Event form dialog */
+  .event-form-dialog input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(0);
+  }
+  .dark .event-form-dialog input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+  }
+
+  /* Firefox */
+  .event-form-dialog input[type="date"] {
+    color-scheme: light;
+  }
+  .dark .event-form-dialog input[type="date"] {
+    color-scheme: dark;
+  }
 }

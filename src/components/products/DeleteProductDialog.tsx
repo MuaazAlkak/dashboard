@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Product, productService } from '@/lib/supabase';
 import { Loader2 } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface DeleteProductDialogProps {
   product: Product | null;
@@ -26,6 +27,7 @@ export function DeleteProductDialog({
   onSuccess,
 }: DeleteProductDialogProps) {
   const [isDeleting, setIsDeleting] = useState(false);
+  const { t } = useLanguage();
 
   const handleDelete = async () => {
     if (!product) return;
@@ -46,11 +48,12 @@ export function DeleteProductDialog({
       //   }
       // }
 
-      toast.success('Product deleted successfully');
+      toast.success(t('products.deleteSuccess'));
       onSuccess?.();
       onOpenChange(false);
-    } catch (error: any) {
-      toast.error(`Failed to delete product: ${error.message}`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`${t('products.deleteError')}: ${errorMessage}`);
     } finally {
       setIsDeleting(false);
     }
@@ -62,10 +65,9 @@ export function DeleteProductDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete Product</AlertDialogTitle>
+          <AlertDialogTitle>{t('products.deleteConfirmTitle')}</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete "{product.title.en}"? This action
-            cannot be undone.
+            {t('products.deleteConfirmMessage')}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -74,7 +76,7 @@ export function DeleteProductDialog({
             onClick={() => onOpenChange(false)}
             disabled={isDeleting}
           >
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button
             variant="destructive"
@@ -84,9 +86,9 @@ export function DeleteProductDialog({
             {isDeleting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Deleting...
+                {t('products.deleting')}
               </>
-            ) : 'Delete'}
+            ) : t('products.delete')}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

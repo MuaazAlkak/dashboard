@@ -38,26 +38,23 @@ export default function Login() {
           .single();
 
         if (adminError && adminError.code === 'PGRST116') {
-          // User not found in admin_users, add them
-          const { error: insertError } = await supabase
-            .from('admin_users')
-            .insert({
-              id: data.user.id,
-              email: data.user.email!,
-              role: 'super_admin'
-            });
+          // User not found in admin_users - deny access for security
+          toast.error('You do not have admin access. Please contact an administrator.');
+          await supabase.auth.signOut();
+          return;
+        }
 
-          if (insertError) {
-            console.error('Error adding to admin_users:', insertError);
-          }
+        if (adminError) {
+          throw adminError;
         }
 
         toast.success('Login successful!');
         navigate('/');
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Login error:', error);
-      toast.error(error.message || 'Failed to login');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to login';
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }

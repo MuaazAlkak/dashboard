@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { orderService } from '@/lib/supabase';
+import { orderService, Order, OrderItemWithProduct } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { usePermissions } from '@/hooks/usePermissions';
 
@@ -53,7 +53,7 @@ export function OrderDetailsDialog({
   onOpenChange,
   onStatusUpdated,
 }: OrderDetailsDialogProps) {
-  const [order, setOrder] = useState<any>(null);
+  const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [newStatus, setNewStatus] = useState('');
@@ -63,6 +63,7 @@ export function OrderDetailsDialog({
     if (orderId && open) {
       fetchOrderDetails();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId, open]);
 
   const fetchOrderDetails = async () => {
@@ -73,8 +74,9 @@ export function OrderDetailsDialog({
       const data = await orderService.getOrder(orderId);
       setOrder(data);
       setNewStatus(data.status);
-    } catch (error: any) {
-      toast.error(`Failed to load order details: ${error.message}`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Failed to load order details: ${errorMessage}`);
       console.error('Error fetching order:', error);
     } finally {
       setIsLoading(false);
@@ -90,8 +92,9 @@ export function OrderDetailsDialog({
       toast.success('Order status updated successfully');
       await fetchOrderDetails();
       onStatusUpdated?.();
-    } catch (error: any) {
-      toast.error(`Failed to update order status: ${error.message}`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Failed to update order status: ${errorMessage}`);
     } finally {
       setIsUpdatingStatus(false);
     }
@@ -282,7 +285,7 @@ export function OrderDetailsDialog({
                 </div>
                 <div className="space-y-3">
                   {order.order_items && order.order_items.length > 0 ? (
-                    order.order_items.map((item: any) => (
+                    order.order_items.map((item: OrderItemWithProduct) => (
                       <div
                         key={item.id}
                         className="flex items-center gap-4 p-3 border border-border rounded-lg bg-card"

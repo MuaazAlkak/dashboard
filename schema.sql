@@ -16,6 +16,9 @@ CREATE TABLE IF NOT EXISTS products (
   category TEXT NOT NULL,
   tags TEXT[] DEFAULT '{}',
   images TEXT[] DEFAULT '{}',
+  featured BOOLEAN DEFAULT false,
+  discount_percentage INTEGER DEFAULT 0 CHECK (discount_percentage >= 0 AND discount_percentage <= 100),
+  discount_active BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -49,6 +52,7 @@ CREATE TABLE IF NOT EXISTS admin_users (
 -- Create indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
 CREATE INDEX IF NOT EXISTS idx_products_created_at ON products(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_products_featured ON products(featured) WHERE featured = true;
 CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders(user_id);
 CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
 CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders(created_at DESC);

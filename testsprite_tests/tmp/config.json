@@ -1,0 +1,13 @@
+{
+  "status": "init",
+  "executionArgs": {
+    "projectName": "crest-backend",
+    "projectPath": "C:\\Users\\Administrator\\Desktop\\Syria\\crest-backend",
+    "testIds": [],
+    "additionalInstruction": "Test the entire application including all CRUD operations for products, orders, events, and users. Focus on finding bugs, hidden issues, edge cases, error handling, authentication, authorization, and data validation. Test the Supabase integration thoroughly. The application runs on http://localhost:8080",
+    "envs": {
+      "API_KEY": "sk-user-qyt8GvhinDZGmkpxw0hOGOpyY72torFBQqylf9ThW7FL9Uq92mxh1WC6xwt1I1P4UYXXXvRlM-L1TvapleLbu2oztie5XtLByzclATtTZIgC_GGRedLYzsd2jooMYdGPut0"
+    },
+    "baseUrl": "http://localhost:8080"
+  }
+}

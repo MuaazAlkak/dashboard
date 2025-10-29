@@ -3,10 +3,13 @@ import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export function DashboardLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { language } = useLanguage();
+  const isRTL = language === 'ar';
 
   return (
     <div className="min-h-screen w-full bg-background">
@@ -28,8 +31,11 @@ export function DashboardLayout() {
       <div
         className={cn(
           'transition-all duration-300',
-          'lg:ml-16',
-          !sidebarCollapsed && 'lg:ml-64'
+          isRTL ? (
+            sidebarCollapsed ? 'lg:mr-16' : 'lg:mr-64'
+          ) : (
+            sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'
+          )
         )}
       >
         <Header onMobileMenuToggle={() => setMobileMenuOpen(!mobileMenuOpen)} />

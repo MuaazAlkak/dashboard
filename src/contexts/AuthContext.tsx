@@ -31,8 +31,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUserRole = async (userId: string) => {
     try {
+      // Verify user is still logged in
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || user.id !== userId) {
+        return; // User logged out
+      }
+      
       const role = await userService.getCurrentUserRole();
-      setUserRole(role);
+      
+      // Double-check user is still logged in before setting state
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (currentUser?.id === userId) {
+        setUserRole(role);
+      }
     } catch (error) {
       console.error('Error fetching user role:', error);
       setUserRole(null);

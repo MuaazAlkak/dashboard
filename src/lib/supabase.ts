@@ -1,7 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error(
+    'Missing Supabase configuration. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment variables.'
+  );
+}
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
@@ -26,8 +32,21 @@ export interface Product {
   tags: string[];
   images: string[];
   featured?: boolean;
+  discount_percentage?: number;
+  discount_active?: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface ShippingInfo {
+  fullName?: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  postalCode?: string;
+  city?: string;
+  country?: string;
 }
 
 export interface Order {
@@ -36,10 +55,11 @@ export interface Order {
   total_amount: number;
   currency: string;
   status: string;
-  shipping: any;
+  shipping: ShippingInfo | null;
   stripe_payment_intent_id?: string;
   created_at: string;
   updated_at: string;
+  order_items?: OrderItemWithProduct[];
 }
 
 export interface OrderItem {
@@ -49,6 +69,10 @@ export interface OrderItem {
   quantity: number;
   unit_price: number;
   created_at: string;
+}
+
+export interface OrderItemWithProduct extends OrderItem {
+  products?: Product;
 }
 
 export interface AdminUser {
@@ -100,17 +124,26 @@ export const productService = {
 
     if (filters?.search && filters.search.trim()) {
       const searchTerm = filters.search.trim();
+      
+      // Validate search term (prevent potential issues)
+      if (searchTerm.length > 100) {
+        throw new Error('Search term too long');
+      }
+      
+      // Escape special characters properly (PostgREST should handle this, but validate input)
+      const escapedSearch = searchTerm.replace(/[%_]/g, '\\$&');
+      
       // Search in title (all languages), slug, description (all languages), and category
       // Use ->> to extract text from JSONB fields for case-insensitive search
       query = query.or(
-        `title->>en.ilike.%${searchTerm}%,` +
-        `title->>ar.ilike.%${searchTerm}%,` +
-        `title->>sv.ilike.%${searchTerm}%,` +
-        `slug.ilike.%${searchTerm}%,` +
-        `description->>en.ilike.%${searchTerm}%,` +
-        `description->>ar.ilike.%${searchTerm}%,` +
-        `description->>sv.ilike.%${searchTerm}%,` +
-        `category.ilike.%${searchTerm}%`
+        `title->>en.ilike.%${escapedSearch}%,` +
+        `title->>ar.ilike.%${escapedSearch}%,` +
+        `title->>sv.ilike.%${escapedSearch}%,` +
+        `slug.ilike.%${escapedSearch}%,` +
+        `description->>en.ilike.%${escapedSearch}%,` +
+        `description->>ar.ilike.%${escapedSearch}%,` +
+        `description->>sv.ilike.%${escapedSearch}%,` +
+        `category.ilike.%${escapedSearch}%`
       );
     }
 
@@ -150,16 +183,20 @@ export const productService = {
 
   // Update product
   async updateProduct(id: string, updates: Partial<Omit<Product, 'id' | 'created_at' | 'updated_at'>>) {
-    const { data, error, status, statusText } = await supabase
+    const { data, error } = await supabase
       .from('products')
       .update(updates)
       .eq('id', id)
       .select();
 
-    console.log('Update response:', { data, error, status, statusText });
+    if (import.meta.env.DEV) {
+      console.log('Update response:', { data, error });
+    }
 
     if (error) {
-      console.error('Update error details:', error);
+      if (import.meta.env.DEV) {
+        console.error('Update error details:', error);
+      }
       throw new Error(error.message || 'Failed to update product');
     }
     
@@ -204,15 +241,25 @@ export const productService = {
 
   // Delete image from storage
   async deleteImage(imageUrl: string) {
-    // Extract the file path from the URL
-    const urlParts = imageUrl.split('/');
-    const fileName = urlParts[urlParts.length - 1];
-    
-    const { error } = await supabase.storage
-      .from('product-images')
-      .remove([fileName]);
+    try {
+      // Extract path from full URL
+      const url = new URL(imageUrl);
+      const pathParts = url.pathname.split('/');
+      const fileName = pathParts[pathParts.length - 1];
+      
+      // Remove query parameters if any
+      const cleanFileName = fileName.split('?')[0];
+      
+      const { error } = await supabase.storage
+        .from('product-images')
+        .remove([cleanFileName]);
 
-    if (error) throw error;
+      if (error) throw error;
+    } catch (error) {
+      // Handle both URL parsing errors and storage errors
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Failed to delete image: ${errorMessage}`);
+    }
   },
 };
 
@@ -295,16 +342,17 @@ export const userService = {
   },
 
   // Create new admin user (only super_admin can do this)
+  // Note: This requires using Supabase client-side auth.signUp() 
+  // or a Supabase Edge Function with service_role key
+  // The old RPC function has been removed - use client-side auth instead
   async createUser(email: string, password: string, role: string) {
-    // Use a simpler database function
-    const { data, error } = await supabase.rpc('create_admin_user', {
-      user_email: email,
-      user_password: password,
-      user_role: role,
-    });
-
-    if (error) throw error;
-    return data;
+    // TODO: Implement using Supabase Edge Function or client-side auth.signUp()
+    // For now, throw an error explaining the change
+    throw new Error(
+      'User creation via RPC is deprecated. ' +
+      'Please use Supabase client-side auth.signUp() or implement an Edge Function. ' +
+      'After creating the auth user, manually add them to admin_users table with the appropriate role.'
+    );
   },
 
   // Update user role

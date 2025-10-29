@@ -36,8 +36,9 @@ export function DeleteEventDialog({
       toast.success('Event deleted successfully');
       onSuccess?.();
       onOpenChange(false);
-    } catch (error: any) {
-      toast.error(`Failed to delete event: ${error.message}`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Failed to delete event: ${errorMessage}`);
     } finally {
       setIsLoading(false);
     }

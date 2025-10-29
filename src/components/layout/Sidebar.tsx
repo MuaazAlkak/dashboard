@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -19,16 +20,17 @@ interface SidebarProps {
 }
 
 const navigation = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard, permission: 'canViewDashboard' },
-  { name: 'Products', href: '/products', icon: Package, permission: 'canViewProducts' },
-  { name: 'Orders', href: '/orders', icon: ShoppingCart, permission: 'canViewOrders' },
-  { name: 'Events', href: '/events', icon: Calendar, permission: 'canViewEvents' },
-  { name: 'Users', href: '/users', icon: Users, permission: 'canViewUsers' },
-  { name: 'Settings', href: '/settings', icon: Settings, permission: 'canViewSettings' },
+  { name: 'nav.dashboard', href: '/', icon: LayoutDashboard, permission: 'canViewDashboard' },
+  { name: 'nav.products', href: '/products', icon: Package, permission: 'canViewProducts' },
+  { name: 'nav.orders', href: '/orders', icon: ShoppingCart, permission: 'canViewOrders' },
+  { name: 'nav.events', href: '/events', icon: Calendar, permission: 'canViewEvents' },
+  { name: 'nav.users', href: '/users', icon: Users, permission: 'canViewUsers' },
+  { name: 'nav.settings', href: '/settings', icon: Settings, permission: 'canViewSettings' },
 ];
 
 export function Sidebar({ collapsed, onToggle, mobileMenuOpen, setMobileMenuOpen }: SidebarProps) {
   const permissions = usePermissions();
+  const { t } = useLanguage();
 
   // Filter navigation based on permissions
   const filteredNavigation = navigation.filter(item => {
@@ -36,14 +38,18 @@ export function Sidebar({ collapsed, onToggle, mobileMenuOpen, setMobileMenuOpen
     return permissions[item.permission as keyof typeof permissions];
   });
 
+  const { language } = useLanguage();
+  const isRTL = language === 'ar';
+
   return (
     <aside
       className={cn(
-        'fixed left-0 top-0 z-40 h-screen border-r border-border bg-sidebar transition-all duration-300',
+        'fixed top-0 z-40 h-screen border-border bg-sidebar transition-all duration-300',
+        isRTL ? 'right-0 border-l' : 'left-0 border-r',
         'lg:translate-x-0',
         collapsed ? 'w-16' : 'w-64',
         // Mobile menu
-        mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        mobileMenuOpen ? 'translate-x-0' : (isRTL ? 'translate-x-full lg:translate-x-0' : '-translate-x-full lg:translate-x-0')
       )}
     >
       <div className="flex h-full flex-col">
@@ -88,10 +94,10 @@ export function Sidebar({ collapsed, onToggle, mobileMenuOpen, setMobileMenuOpen
                   collapsed && 'lg:justify-center'
                 )
               }
-              title={collapsed ? item.name : undefined}
+              title={collapsed ? t(item.name) : undefined}
             >
               <item.icon className="h-5 w-5 flex-shrink-0" />
-              {!collapsed && <span>{item.name}</span>}
+              {!collapsed && <span>{t(item.name)}</span>}
             </NavLink>
           ))}
         </nav>

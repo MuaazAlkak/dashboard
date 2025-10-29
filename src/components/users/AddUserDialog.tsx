@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { userService } from '@/lib/supabase';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface AddUserDialogProps {
   open: boolean;
@@ -32,6 +33,7 @@ export function AddUserDialog({
   onSuccess,
 }: AddUserDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const { t } = useLanguage();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -47,8 +49,9 @@ export function AddUserDialog({
       toast.success('User created successfully');
       onSuccess?.();
       onOpenChange(false);
-    } catch (error: any) {
-      toast.error(`Failed to create user: ${error.message}`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Failed to create user: ${errorMessage}`);
     } finally {
       setIsLoading(false);
     }
@@ -58,16 +61,16 @@ export function AddUserDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Add New Admin User</DialogTitle>
+          <DialogTitle>{t('dialog.addUser')}</DialogTitle>
           <DialogDescription>
-            Create a new admin user with specific role and permissions
+            {t('dialog.addUserDesc')}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Email */}
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">{t('dialog.email')}</Label>
             <Input
               id="email"
               name="email"
@@ -80,7 +83,7 @@ export function AddUserDialog({
 
           {/* Password */}
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">{t('dialog.password')}</Label>
             <Input
               id="password"
               name="password"
@@ -91,29 +94,29 @@ export function AddUserDialog({
               disabled={isLoading}
             />
             <p className="text-xs text-muted-foreground">
-              Minimum 6 characters
+              {t('dialog.passwordMin')}
             </p>
           </div>
 
           {/* Role */}
           <div className="space-y-2">
-            <Label htmlFor="role">Role</Label>
+            <Label htmlFor="role">{t('dialog.role')}</Label>
             <Select name="role" defaultValue="viewer" required>
               <SelectTrigger id="role" disabled={isLoading}>
-                <SelectValue placeholder="Select role" />
+                <SelectValue placeholder={t('dialog.selectRole')} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="super_admin">
-                  Super Admin - Full access
+                  {t('dialog.superAdmin')}
                 </SelectItem>
                 <SelectItem value="admin">
-                  Admin - Manage products, orders, users
+                  {t('dialog.admin')}
                 </SelectItem>
                 <SelectItem value="editor">
-                  Editor - Manage products and orders
+                  {t('dialog.editor')}
                 </SelectItem>
                 <SelectItem value="viewer">
-                  Viewer - Read-only access
+                  {t('dialog.viewer')}
                 </SelectItem>
               </SelectContent>
             </Select>
@@ -127,7 +130,7 @@ export function AddUserDialog({
               onClick={() => onOpenChange(false)}
               disabled={isLoading}
             >
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               type="submit"
@@ -137,10 +140,10 @@ export function AddUserDialog({
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating...
+                  {t('dialog.creating')}
                 </>
               ) : (
-                'Create User'
+                t('dialog.createUser')
               )}
             </Button>
           </div>

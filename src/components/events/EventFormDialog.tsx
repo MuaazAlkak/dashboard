@@ -13,12 +13,14 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Event, eventService } from '@/lib/supabase';
 import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface EventFormDialogProps {
   event?: Event | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
+  prefilledDate?: Date | null;
 }
 
 export function EventFormDialog({
@@ -26,8 +28,10 @@ export function EventFormDialog({
   open,
   onOpenChange,
   onSuccess,
+  prefilledDate,
 }: EventFormDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const { t } = useLanguage();
   const [formData, setFormData] = useState({
     title_en: '',
     title_ar: '',
@@ -45,7 +49,19 @@ export function EventFormDialog({
   });
 
   useEffect(() => {
-    if (event) {
+    if (prefilledDate && !event) {
+      // Prefill dates when adding event from calendar
+      const startDate = new Date(prefilledDate);
+      startDate.setHours(0, 0, 0, 0);
+      const endDate = new Date(prefilledDate);
+      endDate.setHours(23, 59, 59, 999);
+      
+      setFormData(prev => ({
+        ...prev,
+        start_date: startDate.toISOString().slice(0, 16),
+        end_date: endDate.toISOString().slice(0, 16),
+      }));
+    } else if (event) {
       setFormData({
         title_en: event.title.en,
         title_ar: event.title.ar,
@@ -61,8 +77,8 @@ export function EventFormDialog({
         discount_percentage: event.discount_percentage || 0,
         is_active: event.is_active,
       });
-    } else {
-      // Reset to defaults when adding new event
+    } else if (!event && !prefilledDate) {
+      // Reset to defaults when adding new event without prefilled date
       const today = new Date().toISOString().split('T')[0];
       const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       setFormData({
@@ -81,7 +97,7 @@ export function EventFormDialog({
         is_active: true,
       });
     }
-  }, [event, open]);
+  }, [event, prefilledDate, open]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -118,8 +134,9 @@ export function EventFormDialog({
 
       onSuccess?.();
       onOpenChange(false);
-    } catch (error: any) {
-      toast.error(`Failed to ${event ? 'update' : 'create'} event: ${error.message}`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Failed to ${event ? 'update' : 'create'} event: ${errorMessage}`);
     } finally {
       setIsLoading(false);
     }
@@ -127,18 +144,18 @@ export function EventFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto event-form-dialog">
         <DialogHeader>
-          <DialogTitle>{event ? 'Edit Event' : 'Add New Event'}</DialogTitle>
+          <DialogTitle>{event ? t('dialog.editEvent') : t('dialog.addEvent')}</DialogTitle>
           <DialogDescription>
-            {event ? 'Update event details' : 'Create a new promotional event or banner'}
+            {t('dialog.eventDetails')}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Title (English) */}
           <div className="space-y-2">
-            <Label htmlFor="title_en">Title (English) *</Label>
+            <Label htmlFor="title_en">{t('dialog.titleEnglish')} *</Label>
             <Input
               id="title_en"
               type="text"
@@ -152,7 +169,7 @@ export function EventFormDialog({
 
           {/* Title (Arabic) */}
           <div className="space-y-2">
-            <Label htmlFor="title_ar">Title (Arabic) *</Label>
+            <Label htmlFor="title_ar">{t('dialog.titleArabic')} *</Label>
             <Input
               id="title_ar"
               type="text"
@@ -167,7 +184,7 @@ export function EventFormDialog({
 
           {/* Title (Swedish) */}
           <div className="space-y-2">
-            <Label htmlFor="title_sv">Title (Swedish) *</Label>
+            <Label htmlFor="title_sv">{t('dialog.titleSwedish')} *</Label>
             <Input
               id="title_sv"
               type="text"
@@ -181,7 +198,7 @@ export function EventFormDialog({
 
           {/* Description (English) */}
           <div className="space-y-2">
-            <Label htmlFor="description_en">Description (English)</Label>
+            <Label htmlFor="description_en">{t('dialog.descriptionEnglish')}</Label>
             <Input
               id="description_en"
               type="text"
@@ -194,7 +211,7 @@ export function EventFormDialog({
 
           {/* Description (Arabic) */}
           <div className="space-y-2">
-            <Label htmlFor="description_ar">Description (Arabic)</Label>
+            <Label htmlFor="description_ar">{t('dialog.descriptionArabic')}</Label>
             <Input
               id="description_ar"
               type="text"
@@ -208,7 +225,7 @@ export function EventFormDialog({
 
           {/* Description (Swedish) */}
           <div className="space-y-2">
-            <Label htmlFor="description_sv">Description (Swedish)</Label>
+            <Label htmlFor="description_sv">{t('dialog.descriptionSwedish')}</Label>
             <Input
               id="description_sv"
               type="text"
@@ -221,7 +238,7 @@ export function EventFormDialog({
 
           {/* Link */}
           <div className="space-y-2">
-            <Label htmlFor="link">Link (Optional)</Label>
+            <Label htmlFor="link">{t('dialog.link')}</Label>
             <Input
               id="link"
               type="url"
@@ -234,7 +251,7 @@ export function EventFormDialog({
 
           {/* Discount Percentage */}
           <div className="space-y-2">
-            <Label htmlFor="discount_percentage">Discount Percentage (Optional)</Label>
+            <Label htmlFor="discount_percentage">{t('dialog.discountPercentage')}</Label>
             <div className="flex gap-2 items-center">
               <Input
                 id="discount_percentage"
@@ -257,7 +274,7 @@ export function EventFormDialog({
 
           {/* Background Color */}
           <div className="space-y-2">
-            <Label htmlFor="background_color">Background Color</Label>
+            <Label htmlFor="background_color">{t('dialog.backgroundColor')}</Label>
             <div className="flex gap-2">
               <Input
                 id="background_color"
@@ -280,7 +297,7 @@ export function EventFormDialog({
 
           {/* Text Color */}
           <div className="space-y-2">
-            <Label htmlFor="text_color">Text Color</Label>
+            <Label htmlFor="text_color">{t('dialog.textColor')}</Label>
             <div className="flex gap-2">
               <Input
                 id="text_color"
@@ -322,7 +339,7 @@ export function EventFormDialog({
 
           {/* Start Date */}
           <div className="space-y-2">
-            <Label htmlFor="start_date">Start Date</Label>
+            <Label htmlFor="start_date">{t('dialog.startDate')}</Label>
             <Input
               id="start_date"
               type="date"
@@ -335,7 +352,7 @@ export function EventFormDialog({
 
           {/* End Date */}
           <div className="space-y-2">
-            <Label htmlFor="end_date">End Date</Label>
+            <Label htmlFor="end_date">{t('dialog.endDate')}</Label>
             <Input
               id="end_date"
               type="date"
@@ -350,7 +367,7 @@ export function EventFormDialog({
           {/* Active Status */}
           <div className="flex items-center justify-between space-y-2">
             <div className="space-y-1">
-              <Label htmlFor="is_active">Active</Label>
+              <Label htmlFor="is_active">{t('dialog.active')}</Label>
               <p className="text-xs text-muted-foreground">
                 Event will only show if active and within date range
               </p>
@@ -371,7 +388,7 @@ export function EventFormDialog({
               onClick={() => onOpenChange(false)}
               disabled={isLoading}
             >
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               type="submit"
@@ -381,10 +398,10 @@ export function EventFormDialog({
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {event ? 'Updating...' : 'Creating...'}
+                  {t('dialog.saving')}
                 </>
               ) : (
-                event ? 'Update Event' : 'Create Event'
+                t('dialog.saveEvent')
               )}
             </Button>
           </div>

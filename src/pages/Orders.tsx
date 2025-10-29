@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Eye, Loader2 } from 'lucide-react';
 import {
   Table,
@@ -11,8 +11,12 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { OrderDetailsDialog } from '@/components/orders/OrderDetailsDialog';
-import { orderService } from '@/lib/supabase';
+import { OrdersAnalytics } from '@/components/orders/OrdersAnalytics';
+import { OrdersChart } from '@/components/orders/OrdersChart';
+import { OrdersFilters } from '@/components/orders/OrdersFilters';
+import { orderService, Order } from '@/lib/supabase';
 import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const getStatusBadgeClass = (status: string) => {
   switch (status) {
@@ -32,10 +36,14 @@ const getStatusBadgeClass = (status: string) => {
 };
 
 export default function Orders() {
-  const [orders, setOrders] = useState<any[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [dateFilter, setDateFilter] = useState('all');
+  const { t } = useLanguage();
 
   useEffect(() => {
     fetchOrders();
@@ -46,8 +54,9 @@ export default function Orders() {
     try {
       const data = await orderService.getOrders();
       setOrders(data);
-    } catch (error: any) {
-      toast.error(`Failed to load orders: ${error.message}`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Failed to load orders: ${errorMessage}`);
       console.error('Error fetching orders:', error);
     } finally {
       setIsLoading(false);
@@ -70,6 +79,99 @@ export default function Orders() {
     }).format(price / 100);
   };
 
+  const handleExport = () => {
+    try {
+      const csvContent = [
+        ['Order ID', 'Customer', 'Email', 'Status', 'Items', 'Total', 'Date'].join(','),
+        ...filteredOrders.map(order => [
+          order.id,
+          order.shipping?.name || 'Guest',
+          order.shipping?.email || 'N/A',
+          order.status,
+          order.order_items?.length || 0,
+          (order.total_amount || order.total || 0) / 100,
+          new Date(order.created_at).toLocaleDateString(),
+        ].map(cell => `"${cell}"`).join(','))
+      ].join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `orders_${new Date().toISOString().split('T')[0]}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+      toast.success('Orders exported successfully');
+    } catch (error) {
+      toast.error('Failed to export orders');
+    }
+  };
+
+  // Filter orders based on search and filters
+  const filteredOrders = useMemo(() => {
+    return orders.filter(order => {
+      // Search filter
+      if (searchQuery) {
+        const searchLower = searchQuery.toLowerCase();
+        const matchesId = order.id.toLowerCase().includes(searchLower);
+        const matchesName = order.shipping?.name?.toLowerCase().includes(searchLower);
+        const matchesEmail = order.shipping?.email?.toLowerCase().includes(searchLower);
+        if (!matchesId && !matchesName && !matchesEmail) return false;
+      }
+
+      // Status filter
+      if (statusFilter !== 'all' && order.status !== statusFilter) {
+        return false;
+      }
+
+      // Date filter
+      if (dateFilter !== 'all') {
+        const orderDate = new Date(order.created_at);
+        const now = new Date();
+        
+        switch (dateFilter) {
+          case 'today': {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            if (orderDate < today) return false;
+            break;
+          }
+          case 'week': {
+            const weekAgo = new Date();
+            weekAgo.setDate(weekAgo.getDate() - 7);
+            if (orderDate < weekAgo) return false;
+            break;
+          }
+          case 'month': {
+            const monthAgo = new Date();
+            monthAgo.setMonth(monthAgo.getMonth() - 1);
+            if (orderDate < monthAgo) return false;
+            break;
+          }
+          case 'quarter': {
+            const quarterAgo = new Date();
+            quarterAgo.setMonth(quarterAgo.getMonth() - 3);
+            if (orderDate < quarterAgo) return false;
+            break;
+          }
+        }
+      }
+
+      return true;
+    });
+  }, [orders, searchQuery, statusFilter, dateFilter]);
+
+  const activeFiltersCount = 
+    (searchQuery ? 1 : 0) + 
+    (statusFilter !== 'all' ? 1 : 0) + 
+    (dateFilter !== 'all' ? 1 : 0);
+
+  const handleClearFilters = () => {
+    setSearchQuery('');
+    setStatusFilter('all');
+    setDateFilter('all');
+  };
+
   if (isLoading) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
@@ -82,28 +184,47 @@ export default function Orders() {
     <div className="space-y-4 sm:space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-foreground sm:text-3xl">Orders</h1>
+        <h1 className="text-2xl font-bold text-foreground sm:text-3xl">{t('orders.title')}</h1>
         <p className="mt-1 text-sm text-muted-foreground sm:mt-2 sm:text-base">
-          Manage and track customer orders
+          {t('orders.subtitle')}
         </p>
       </div>
+
+      {/* Analytics Cards */}
+      <OrdersAnalytics orders={orders} />
+
+      {/* Filters */}
+      <OrdersFilters
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        statusFilter={statusFilter}
+        onStatusFilterChange={setStatusFilter}
+        dateFilter={dateFilter}
+        onDateFilterChange={setDateFilter}
+        onExport={handleExport}
+        activeFiltersCount={activeFiltersCount}
+        onClearFilters={handleClearFilters}
+      />
+
+      {/* Chart */}
+      <OrdersChart orders={orders} />
 
       {/* Orders Table */}
       <div className="rounded-lg border border-border bg-card shadow-elegant overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className="min-w-[100px]">Order ID</TableHead>
-              <TableHead className="hidden sm:table-cell">Customer</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="hidden md:table-cell">Items</TableHead>
-              <TableHead>Total</TableHead>
-              <TableHead className="hidden lg:table-cell">Date</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead className="min-w-[100px]">{t('orders.orderId')}</TableHead>
+              <TableHead className="hidden sm:table-cell">{t('orders.customer')}</TableHead>
+              <TableHead>{t('orders.status')}</TableHead>
+              <TableHead className="hidden md:table-cell">{t('orders.items')}</TableHead>
+              <TableHead>{t('orders.total')}</TableHead>
+              <TableHead className="hidden lg:table-cell">{t('orders.date')}</TableHead>
+              <TableHead className="text-right">{t('orders.actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {orders.map((order) => {
+            {filteredOrders.map((order) => {
               const itemCount = order.order_items?.length || 0;
               const customerEmail = order.shipping?.email || 'N/A';
               const customerName = order.shipping?.name || 'Guest';
@@ -133,7 +254,7 @@ export default function Orders() {
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
                     <span className="text-muted-foreground text-sm">
-                      {itemCount} {itemCount === 1 ? 'item' : 'items'}
+                      {itemCount} {t('orders.items')}
                     </span>
                   </TableCell>
                   <TableCell className="font-medium text-sm sm:text-base">
@@ -150,7 +271,7 @@ export default function Orders() {
                       className="hover:bg-muted"
                     >
                       <Eye className="h-4 w-4 mr-1" />
-                      <span className="hidden sm:inline">View</span>
+                      <span className="hidden sm:inline">{t('orders.view')}</span>
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -159,9 +280,22 @@ export default function Orders() {
           </TableBody>
         </Table>
 
+        {filteredOrders.length === 0 && orders.length > 0 && (
+          <div className="py-12 text-center">
+            <p className="text-muted-foreground">No orders match your filters</p>
+            <Button
+              variant="link"
+              onClick={handleClearFilters}
+              className="mt-2"
+            >
+              Clear filters
+            </Button>
+          </div>
+        )}
+
         {orders.length === 0 && (
           <div className="py-12 text-center">
-            <p className="text-muted-foreground">No orders found</p>
+            <p className="text-muted-foreground">{t('orders.noOrders')}</p>
           </div>
         )}
       </div>
