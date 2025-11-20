@@ -3,7 +3,9 @@
  * This service calls the backend API to send emails using SMTP
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+import { getApiUrl } from './utils';
+
+const API_BASE_URL = getApiUrl();
 
 interface SendOrderStatusUpdateEmailParams {
   orderId: string;

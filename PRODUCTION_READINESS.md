@@ -25,8 +25,10 @@ The JavaScript bundle is 770.92 kB (216.42 kB gzipped), which exceeds the recomm
 ```env
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key-here
-VITE_API_URL=http://localhost:3001  # Optional, defaults to localhost:3001
+VITE_API_URL=https://your-backend-domain.com  # REQUIRED for production - Backend API URL
 ```
+
+**⚠️ IMPORTANT:** `VITE_API_URL` is **REQUIRED** for production. Without it, user creation, user deletion, and product deletion will fail.
 
 ### Security Best Practices
 - ✅ Supabase keys are validated before client initialization

@@ -87,6 +87,7 @@ Create a `.env` file with:
 ```env
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key
+VITE_API_URL=https://your-backend-domain.com  # Backend API URL (required for user/product management)
 ```
 
 Get these values from:

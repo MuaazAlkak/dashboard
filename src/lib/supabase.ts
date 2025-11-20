@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { getApiUrl } from './utils';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -210,7 +211,7 @@ export const productService = {
   // Delete product
   async deleteProduct(id: string) {
     // Call backend API to delete product (bypasses RLS)
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+    const API_URL = getApiUrl();
     
     try {
       const response = await fetch(`${API_URL}/api/products/${id}`, {
@@ -376,7 +377,12 @@ export const userService = {
   // Create new admin user
   async createUser(email: string, password: string, role: string) {
     // Call backend API to create user (uses admin API, doesn't sign in)
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+    const API_URL = getApiUrl();
+    
+    // Warn in production if API URL is not set
+    if (import.meta.env.PROD && !import.meta.env.VITE_API_URL) {
+      console.error('VITE_API_URL is not set in production. User creation will fail.');
+    }
     
     try {
       const response = await fetch(`${API_URL}/api/users`, {
@@ -403,7 +409,7 @@ export const userService = {
   // Update user role
   async updateUserRole(userId: string, role: string) {
     // Call backend API to update user role
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+    const API_URL = getApiUrl();
     
     try {
       const response = await fetch(`${API_URL}/api/users/${userId}/role`, {
@@ -444,7 +450,7 @@ export const userService = {
   // Delete user
   async deleteUser(userId: string) {
     // Call backend API to delete user from Auth and Database
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+    const API_URL = getApiUrl();
     
     try {
       const response = await fetch(`${API_URL}/api/users/${userId}`, {
