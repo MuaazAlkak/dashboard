@@ -377,9 +377,9 @@ export default function Events() {
           </TableBody>
         </Table>
 
-        {events.length === 0 && (
+        {events.length === 0 && !isLoading && (
           <div className="py-12 text-center">
-            <p className="text-muted-foreground">{t('common.loading')}</p>
+            <p className="text-muted-foreground">{t('events.noEvents')}</p>
           </div>
         )}
       </div>

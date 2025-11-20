@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Filter, X, Keyboard } from 'lucide-react';
+import { Plus, Search, Filter, X, Keyboard, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -18,13 +18,16 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ProductTable } from '@/components/products/ProductTable';
 import { ProductFormDialog } from '@/components/products/ProductFormDialog';
 import { ExportButton } from '@/components/products/ExportButton';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useKeyboardShortcuts, getShortcutDisplay } from '@/hooks/useKeyboardShortcuts';
-import { productService, Product } from '@/lib/supabase';
+import { productService, Product, settingsService } from '@/lib/supabase';
 import { toast } from 'sonner';
 
 export default function Products() {
@@ -33,12 +36,46 @@ export default function Products() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [shippingFeeEnabled, setShippingFeeEnabled] = useState<boolean>(true);
+  const [isLoadingShippingSetting, setIsLoadingShippingSetting] = useState(true);
   const permissions = usePermissions();
   const { t } = useLanguage();
 
   useEffect(() => {
     fetchProducts();
+    fetchShippingFeeSetting();
   }, []);
+
+  const fetchShippingFeeSetting = async () => {
+    try {
+      setIsLoadingShippingSetting(true);
+      const enabled = await settingsService.getShippingFeeEnabled();
+      setShippingFeeEnabled(enabled);
+    } catch (error) {
+      console.error('Failed to fetch shipping fee setting:', error);
+      // Default to enabled if fetch fails
+      setShippingFeeEnabled(true);
+    } finally {
+      setIsLoadingShippingSetting(false);
+    }
+  };
+
+  const handleShippingFeeToggle = async (enabled: boolean) => {
+    try {
+      await settingsService.setShippingFeeEnabled(enabled);
+      setShippingFeeEnabled(enabled);
+      toast.success(
+        enabled
+          ? 'Shipping fee has been enabled'
+          : 'Shipping fee has been disabled'
+      );
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Failed to update shipping fee setting: ${errorMessage}`);
+      // Revert the toggle on error
+      setShippingFeeEnabled(!enabled);
+    }
+  };
 
   const fetchProducts = async () => {
     try {
@@ -139,6 +176,34 @@ export default function Products() {
           )}
         </div>
       </div>
+
+      {/* Shipping Fee Toggle */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Truck className="h-5 w-5 text-primary" />
+              <div>
+                <CardTitle className="text-lg">Shipping Fee</CardTitle>
+                <CardDescription>
+                  Enable or disable shipping fees for all orders
+                </CardDescription>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Label htmlFor="shipping-fee-toggle" className="cursor-pointer">
+                {shippingFeeEnabled ? 'Enabled' : 'Disabled'}
+              </Label>
+              <Switch
+                id="shipping-fee-toggle"
+                checked={shippingFeeEnabled}
+                onCheckedChange={handleShippingFeeToggle}
+                disabled={isLoadingShippingSetting}
+              />
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
 
       {/* Filters */}
       <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">

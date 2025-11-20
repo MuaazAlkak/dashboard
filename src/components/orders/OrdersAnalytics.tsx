@@ -69,10 +69,26 @@ export function OrdersAnalytics({ orders }: OrdersAnalyticsProps) {
     };
   }, [orders]);
 
-  const formatCurrency = (amount: number) => {
+  // Get the most common currency from orders, or default to SEK
+  const getPrimaryCurrency = () => {
+    const currencyCounts = orders.reduce((acc, order) => {
+      const currency = order.currency?.toUpperCase() || 'SEK';
+      acc[currency] = (acc[currency] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const mostCommonCurrency = Object.entries(currencyCounts).reduce((a, b) => 
+      a[1] > b[1] ? a : b, ['SEK', 0] as [string, number]
+    )[0];
+
+    return mostCommonCurrency;
+  };
+
+  const formatCurrency = (amount: number, currency?: string) => {
+    const displayCurrency = currency || getPrimaryCurrency();
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'SEK',
+      currency: displayCurrency,
     }).format(amount / 100);
   };
 

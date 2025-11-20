@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
   Package, 
@@ -8,7 +8,7 @@ import {
   Users,
   AlertCircle
 } from 'lucide-react';
-import { productService, orderService } from '@/lib/supabase';
+import { productService, orderService, Order } from '@/lib/supabase';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface Stats {
@@ -22,6 +22,7 @@ interface Stats {
 
 export function DashboardStats() {
   const [stats, setStats] = useState<Stats | null>(null);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -30,7 +31,7 @@ export function DashboardStats() {
 
   const fetchStats = async () => {
     try {
-      const [products, orders] = await Promise.all([
+      const [products, ordersData] = await Promise.all([
         productService.getProducts(),
         orderService.getOrders(),
       ]);
@@ -41,11 +42,12 @@ export function DashboardStats() {
         (p) => p.discount_active && p.discount_percentage && p.discount_percentage > 0
       ).length;
 
-      const totalRevenue = orders.reduce((sum, order) => sum + (order.total_amount || 0), 0);
+      const totalRevenue = ordersData.reduce((sum, order) => sum + (order.total_amount || 0), 0);
 
+      setOrders(ordersData);
       setStats({
         totalProducts: products.length,
-        totalOrders: orders.length,
+        totalOrders: ordersData.length,
         lowStockProducts,
         totalRevenue,
         productsWithDiscount,
@@ -58,7 +60,33 @@ export function DashboardStats() {
     }
   };
 
-  const statCards = [
+  // Get the most common currency from orders, or default to SEK
+  const getPrimaryCurrency = () => {
+    if (orders.length === 0) return 'SEK';
+    
+    const currencyCounts = orders.reduce((acc, order) => {
+      const currency = order.currency?.toUpperCase() || 'SEK';
+      acc[currency] = (acc[currency] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const mostCommonCurrency = Object.entries(currencyCounts).reduce((a, b) => 
+      a[1] > b[1] ? a : b, ['SEK', 0] as [string, number]
+    )[0];
+
+    return mostCommonCurrency;
+  };
+
+  const formatCurrency = (amount: number) => {
+    const currency = getPrimaryCurrency();
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency,
+    }).format(amount / 100);
+  };
+
+  // Calculate statCards with proper currency formatting
+  const statCards = useMemo(() => [
     {
       title: 'Total Products',
       value: stats?.totalProducts || 0,
@@ -96,12 +124,12 @@ export function DashboardStats() {
     },
     {
       title: 'Total Revenue',
-      value: `${(stats?.totalRevenue || 0) / 100} SEK`,
+      value: formatCurrency(stats?.totalRevenue || 0),
       icon: DollarSign,
       color: 'text-emerald-600',
       bgColor: 'bg-emerald-100',
     },
-  ];
+  ], [stats, orders]);
 
   if (isLoading) {
     return (

@@ -31,6 +31,7 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.orders': 'Orders',
     'nav.events': 'Events',
     'nav.users': 'Users',
+    'nav.logs': 'Audit Logs',
     'nav.settings': 'Settings',
     
     // Dashboard
@@ -113,6 +114,7 @@ const translations: Record<Language, Record<string, string>> = {
     'events.edit': 'Edit',
     'events.duplicate': 'Duplicate',
     'events.delete': 'Delete',
+    'events.noEvents': 'No events found',
     
     // Users
     'users.title': 'Admin Users',
@@ -252,6 +254,7 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.orders': 'الطلبات',
     'nav.events': 'الفعاليات',
     'nav.users': 'المستخدمين',
+    'nav.logs': 'سجلات التدقيق',
     'nav.settings': 'الإعدادات',
     
     // Dashboard
@@ -334,6 +337,7 @@ const translations: Record<Language, Record<string, string>> = {
     'events.edit': 'تعديل',
     'events.duplicate': 'نسخ',
     'events.delete': 'حذف',
+    'events.noEvents': 'لا توجد فعاليات',
     
     // Users
     'users.title': 'مستخدمو الإدارة',
@@ -473,6 +477,7 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.orders': 'Beställningar',
     'nav.events': 'Evenemang',
     'nav.users': 'Användare',
+    'nav.logs': 'Revisionsloggar',
     'nav.settings': 'Inställningar',
     
     // Dashboard
@@ -555,6 +560,7 @@ const translations: Record<Language, Record<string, string>> = {
     'events.edit': 'Redigera',
     'events.duplicate': 'Duplicera',
     'events.delete': 'Ta bort',
+    'events.noEvents': 'Inga evenemang hittades',
     
     // Users
     'users.title': 'Administratörer',

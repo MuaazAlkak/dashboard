@@ -10,6 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Product, productService } from '@/lib/supabase';
+import { productLogger } from '@/lib/auditLogger';
 import { Loader2 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -35,6 +36,10 @@ export function DeleteProductDialog({
     setIsDeleting(true);
 
     try {
+      // Log the deletion before deleting
+      const productName = product.title?.en || product.title?.sv || product.title?.ar || 'Product';
+      await productLogger.deleted(product.id, productName, product);
+      
       // Delete product from database
       await productService.deleteProduct(product.id);
       
@@ -48,12 +53,24 @@ export function DeleteProductDialog({
       //   }
       // }
 
-      toast.success(t('products.deleteSuccess'));
+      toast.success(t('products.deleteSuccess') || 'Product deleted successfully');
       onSuccess?.();
       onOpenChange(false);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      toast.error(`${t('products.deleteError')}: ${errorMessage}`);
+    } catch (error: unknown) {
+      console.error('Error deleting product:', error);
+      let errorMessage = 'Unknown error';
+      
+      if (error?.message) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      } else if (error?.error_description) {
+        errorMessage = error.error_description;
+      } else if (error?.code) {
+        errorMessage = `Error code: ${error.code}`;
+      }
+      
+      toast.error(`${t('products.deleteError') || 'Failed to delete product'}: ${errorMessage}`);
     } finally {
       setIsDeleting(false);
     }

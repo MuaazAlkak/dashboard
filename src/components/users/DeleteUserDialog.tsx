@@ -10,6 +10,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { AdminUser, userService } from '@/lib/supabase';
+import { userLogger } from '@/lib/auditLogger';
 import { toast } from 'sonner';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -34,7 +35,17 @@ export function DeleteUserDialog({
 
     setIsDeleting(true);
     try {
+      // Delete user first (most important operation)
       await userService.deleteUser(user.id);
+      
+      // Log the deletion after successful deletion (non-blocking)
+      try {
+        await userLogger.deleted(user.id, user.email, user);
+      } catch (logError) {
+        // Don't fail the deletion if logging fails
+        console.error('Failed to log user deletion:', logError);
+      }
+      
       toast.success(`User ${user.email} has been deleted`);
       onSuccess();
       onOpenChange(false);

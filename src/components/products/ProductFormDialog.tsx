@@ -21,6 +21,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { Product, productService, supabase } from '@/lib/supabase';
+import { productLogger } from '@/lib/auditLogger';
 import { translateProductFields } from '@/lib/translator';
 
 interface ProductFormDialogProps {
@@ -196,7 +197,7 @@ export function ProductFormDialog({
           sv: formData.get('description-sv') as string || '',
         },
         price,
-        currency: formData.get('currency') as string,
+        currency: 'SEK', // Always SEK
         stock,
         category: formData.get('category') as string,
         tags: (formData.get('tags') as string).split(',').map(t => t.trim()).filter(Boolean),
@@ -207,10 +208,22 @@ export function ProductFormDialog({
       };
 
       if (isEditing && product) {
+        // Get current product data for logging
+        const currentProduct = await productService.getProduct(product.id);
         await productService.updateProduct(product.id, productData);
+        
+        // Log the update
+        const productName = productData.title.en || productData.title.sv || productData.title.ar || 'Product';
+        await productLogger.updated(product.id, productName, currentProduct, productData);
+        
         toast.success('Product updated successfully');
       } else {
-        await productService.addProduct(productData);
+        const newProduct = await productService.addProduct(productData);
+        
+        // Log the creation
+        const productName = productData.title.en || productData.title.sv || productData.title.ar || 'Product';
+        await productLogger.created(newProduct.id, productName, productData);
+        
         toast.success('Product created successfully');
       }
 
@@ -333,14 +346,16 @@ export function ProductFormDialog({
 
             {/* Price */}
             <div className="space-y-2">
-              <Label htmlFor="price">Price (in smallest unit)</Label>
+              <Label htmlFor="price">Price (SEK)</Label>
               <Input
                 id="price"
                 name="price"
                 type="number"
-                placeholder="e.g., 29900 for 299.00 SEK"
+                placeholder="e.g., 299 for 299 SEK"
                 defaultValue={product?.price}
                 required
+                min="0"
+                step="1"
               />
             </div>
 
@@ -374,20 +389,8 @@ export function ProductFormDialog({
               </Select>
             </div>
 
-            {/* Currency */}
-            <div className="space-y-2">
-              <Label htmlFor="currency">Currency</Label>
-              <Select name="currency" defaultValue={product?.currency || 'SEK'}>
-                <SelectTrigger id="currency">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="SEK">SEK</SelectItem>
-                  <SelectItem value="USD">USD</SelectItem>
-                  <SelectItem value="EUR">EUR</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Currency - Hidden, always SEK */}
+            <input type="hidden" name="currency" value="SEK" />
           </div>
 
           {/* Description (English) */}
@@ -491,16 +494,16 @@ export function ProductFormDialog({
                 <p className="text-sm font-medium">Discount Preview:</p>
                 <div className="mt-1 flex items-baseline gap-2">
                   <span className="text-lg font-bold text-primary">
-                    {new Intl.NumberFormat('en-US', {
+                    {new Intl.NumberFormat('sv-SE', {
                       style: 'currency',
-                      currency: product.currency,
-                    }).format((product.price * (100 - (parseInt(document.getElementById('discount_percentage')?.['value'] || '0') || 0))) / 10000)}
+                      currency: 'SEK',
+                    }).format((product.price * (100 - (parseInt(document.getElementById('discount_percentage')?.['value'] || '0') || 0))) / 100)}
                   </span>
                   <span className="text-sm text-muted-foreground line-through">
-                    {new Intl.NumberFormat('en-US', {
+                    {new Intl.NumberFormat('sv-SE', {
                       style: 'currency',
-                      currency: product.currency,
-                    }).format(product.price / 100)}
+                      currency: 'SEK',
+                    }).format(product.price)}
                   </span>
                 </div>
               </div>

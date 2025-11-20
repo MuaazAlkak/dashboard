@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
+import { userLogger } from '@/lib/auditLogger';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -47,6 +48,9 @@ export default function Login() {
         if (adminError) {
           throw adminError;
         }
+
+        // Log the login
+        await userLogger.login(data.user.id, email);
 
         toast.success('Login successful!');
         navigate('/');

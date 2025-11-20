@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { userService } from '@/lib/supabase';
+import { userLogger } from '@/lib/auditLogger';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface AddUserDialogProps {
@@ -45,7 +46,18 @@ export function AddUserDialog({
     const role = formData.get('role') as string;
 
     try {
-      await userService.createUser(email, password, role);
+      const newUser = await userService.createUser(email, password, role);
+      
+      // Log the creation
+      if (newUser?.id) {
+        try {
+          await userLogger.created(newUser.id, email, { email, role });
+        } catch (logError) {
+          // Don't fail user creation if logging fails
+          console.error('Failed to log user creation:', logError);
+        }
+      }
+      
       toast.success('User created successfully');
       onSuccess?.();
       onOpenChange(false);

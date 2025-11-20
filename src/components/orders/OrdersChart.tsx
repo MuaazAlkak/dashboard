@@ -13,6 +13,31 @@ interface OrdersChartProps {
 export function OrdersChart({ orders }: OrdersChartProps) {
   const [isOpen, setIsOpen] = useState(true);
   const { t } = useLanguage();
+  
+  // Get the most common currency from orders, or default to SEK
+  const getPrimaryCurrency = () => {
+    const currencyCounts = orders.reduce((acc, order) => {
+      const currency = order.currency?.toUpperCase() || 'SEK';
+      acc[currency] = (acc[currency] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const mostCommonCurrency = Object.entries(currencyCounts).reduce((a, b) => 
+      a[1] > b[1] ? a : b, ['SEK', 0] as [string, number]
+    )[0];
+
+    return mostCommonCurrency;
+  };
+
+  const primaryCurrency = useMemo(() => getPrimaryCurrency(), [orders]);
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: primaryCurrency,
+    }).format(amount);
+  };
+
   const chartData = useMemo(() => {
     // Get last 7 days
     const last7Days = Array.from({ length: 7 }, (_, i) => {
@@ -74,7 +99,7 @@ export function OrdersChart({ orders }: OrdersChartProps) {
                     {day.orders} orders
                   </span>
                   <span className="font-semibold">
-                    {day.revenue.toFixed(0)} SEK
+                    {formatCurrency(day.revenue)}
                   </span>
                 </div>
               </div>

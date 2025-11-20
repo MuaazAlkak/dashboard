@@ -209,12 +209,44 @@ export const productService = {
 
   // Delete product
   async deleteProduct(id: string) {
-    const { error } = await supabase
-      .from('products')
-      .delete()
-      .eq('id', id);
+    // Call backend API to delete product (bypasses RLS)
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+    
+    try {
+      const response = await fetch(`${API_URL}/api/products/${id}`, {
+        method: 'DELETE',
+      });
 
-    if (error) throw error;
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to delete product: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error('Error deleting product via API:', error);
+      
+      // Fallback: Try to delete from products table directly
+      // This is a fallback if the backend API is not available
+      console.log('Falling back to direct table deletion...');
+      const { data, error: fallbackError } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', id)
+        .select();
+
+      if (fallbackError) {
+        throw new Error(fallbackError.message || `Failed to delete product: ${fallbackError.code || 'Unknown error'}`);
+      }
+
+      // Check if product was actually deleted
+      if (!data || data.length === 0) {
+        throw new Error('Product not found or could not be deleted. You may not have permission to delete this product.');
+      }
+
+      return data[0];
+    }
   },
 
   // Upload product image to storage
@@ -341,40 +373,106 @@ export const userService = {
     return data?.role || null;
   },
 
-  // Create new admin user (only super_admin can do this)
-  // Note: This requires using Supabase client-side auth.signUp() 
-  // or a Supabase Edge Function with service_role key
-  // The old RPC function has been removed - use client-side auth instead
+  // Create new admin user
   async createUser(email: string, password: string, role: string) {
-    // TODO: Implement using Supabase Edge Function or client-side auth.signUp()
-    // For now, throw an error explaining the change
-    throw new Error(
-      'User creation via RPC is deprecated. ' +
-      'Please use Supabase client-side auth.signUp() or implement an Edge Function. ' +
-      'After creating the auth user, manually add them to admin_users table with the appropriate role.'
-    );
+    // Call backend API to create user (uses admin API, doesn't sign in)
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+    
+    try {
+      const response = await fetch(`${API_URL}/api/users`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password, role }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || errorData.error || `Failed to create user: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return result.user;
+    } catch (error) {
+      console.error('Error creating user via API:', error);
+      throw error;
+    }
   },
 
   // Update user role
   async updateUserRole(userId: string, role: string) {
-    const { data, error } = await supabase
-      .from('admin_users')
-      .update({ role })
-      .eq('id', userId)
-      .select();
+    // Call backend API to update user role
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+    
+    try {
+      const response = await fetch(`${API_URL}/api/users/${userId}/role`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ role }),
+      });
 
-    if (error) throw error;
-    return data;
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to update user role: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return result.user;
+    } catch (error) {
+      console.error('Error updating user role via API:', error);
+      
+      // Fallback: Try to update admin_users table directly
+      // This is a fallback if the backend API is not available
+      console.log('Falling back to direct table update...');
+      const { data, error: fallbackError } = await supabase
+        .from('admin_users')
+        .update({ role })
+        .eq('id', userId)
+        .select();
+
+      if (fallbackError) {
+        throw fallbackError;
+      }
+      
+      return data;
+    }
   },
 
   // Delete user
   async deleteUser(userId: string) {
-    const { error } = await supabase
-      .from('admin_users')
-      .delete()
-      .eq('id', userId);
+    // Call backend API to delete user from Auth and Database
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+    
+    try {
+      const response = await fetch(`${API_URL}/api/users/${userId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
-    if (error) throw error;
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.message || errorData.error || `Failed to delete user: ${response.statusText}`;
+        throw new Error(errorMessage);
+      }
+
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error('Error deleting user via API:', error);
+      
+      // Re-throw the error instead of falling back
+      // The backend API is required for proper user deletion (removes from auth.users)
+      // Falling back to admin_users deletion would leave orphaned auth users
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to delete user. Please ensure the backend server is running.');
+    }
   },
 };
 
@@ -455,5 +553,178 @@ export const eventService = {
       throw new Error('Failed to toggle event status');
     }
     return data[0] as Event;
+  },
+};
+
+// Settings operations
+export const settingsService = {
+  // Get shipping fee enabled setting
+  async getShippingFeeEnabled(): Promise<boolean> {
+    const { data, error } = await supabase
+      .from('settings')
+      .select('value')
+      .eq('key', 'shipping_fee_enabled')
+      .single();
+
+    if (error) {
+      // If settings table doesn't exist or setting not found, default to true
+      console.warn('Failed to fetch shipping fee setting, defaulting to enabled:', error);
+      return true;
+    }
+
+    // Handle both boolean and string values
+    const value = data?.value;
+    if (typeof value === 'boolean') {
+      return value;
+    }
+    if (typeof value === 'string') {
+      return value === 'true';
+    }
+    return true; // Default to enabled
+  },
+
+  // Update shipping fee enabled setting
+  async setShippingFeeEnabled(enabled: boolean): Promise<void> {
+    const { data, error } = await supabase
+      .from('settings')
+      .upsert(
+        {
+          key: 'shipping_fee_enabled',
+          value: enabled,
+        },
+        {
+          onConflict: 'key',
+        }
+      )
+      .select();
+
+    if (error) throw error;
+  },
+};
+
+// Audit Log operations
+export interface AuditLog {
+  id: string;
+  user_id: string;
+  user_email: string | null;
+  action: string;
+  entity_type: string;
+  entity_id: string | null;
+  entity_name: string | null;
+  changes: unknown;
+  metadata: unknown;
+  reverted: boolean;
+  reverted_at: string | null;
+  reverted_by: string | null;
+  deleted: boolean;
+  deleted_at: string | null;
+  deleted_by: string | null;
+  created_at: string;
+}
+
+export const auditLogService = {
+  // Get all audit logs
+  async getLogs(filters?: {
+    action?: string;
+    entityType?: string;
+    userId?: string;
+    startDate?: string;
+    endDate?: string;
+    reverted?: boolean;
+    deleted?: boolean;
+    includeDeleted?: boolean;
+  }) {
+    let query = supabase
+      .from('audit_logs')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    // By default, exclude deleted logs unless explicitly requested
+    if (filters?.includeDeleted !== true) {
+      query = query.eq('deleted', false);
+    }
+
+    if (filters?.action) {
+      query = query.eq('action', filters.action);
+    }
+
+    if (filters?.entityType) {
+      query = query.eq('entity_type', filters.entityType);
+    }
+
+    if (filters?.userId) {
+      query = query.eq('user_id', filters.userId);
+    }
+
+    if (filters?.startDate) {
+      query = query.gte('created_at', filters.startDate);
+    }
+
+    if (filters?.endDate) {
+      query = query.lte('created_at', filters.endDate);
+    }
+
+    if (filters?.reverted !== undefined) {
+      query = query.eq('reverted', filters.reverted);
+    }
+
+    if (filters?.deleted !== undefined) {
+      query = query.eq('deleted', filters.deleted);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+    return data as AuditLog[];
+  },
+
+  // Get single audit log by ID
+  async getLog(id: string) {
+    const { data, error } = await supabase
+      .from('audit_logs')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) throw error;
+    return data as AuditLog;
+  },
+
+  // Mark log as reverted
+  async markAsReverted(logId: string) {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    const { data, error } = await supabase
+      .from('audit_logs')
+      .update({
+        reverted: true,
+        reverted_at: new Date().toISOString(),
+        reverted_by: user?.id || null,
+      })
+      .eq('id', logId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as AuditLog;
+  },
+
+  // Soft delete audit log (mark as deleted instead of actually deleting)
+  async deleteLog(logId: string) {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    const { data, error } = await supabase
+      .from('audit_logs')
+      .update({
+        deleted: true,
+        deleted_at: new Date().toISOString(),
+        deleted_by: user?.id || null,
+      })
+      .eq('id', logId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as AuditLog;
   },
 };

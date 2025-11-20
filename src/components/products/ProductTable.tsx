@@ -79,11 +79,11 @@ export function ProductTable({ searchQuery, categoryFilter }: ProductTableProps)
     setSelectedProducts([]);
   };
 
-  const formatPrice = (price: number, currency: string) => {
-    return new Intl.NumberFormat('en-US', {
+  const formatPrice = (price: number, currency: string = 'SEK') => {
+    return new Intl.NumberFormat('sv-SE', {
       style: 'currency',
-      currency,
-    }).format(price / 100);
+      currency: 'SEK',
+    }).format(price);
   };
 
   const calculateDiscountedPrice = (price: number, discountPercentage: number) => {

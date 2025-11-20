@@ -20,6 +20,8 @@ import {
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { orderService, Order, OrderItemWithProduct } from '@/lib/supabase';
+import { sendOrderStatusUpdateEmail } from '@/lib/emailService';
+import { orderLogger } from '@/lib/auditLogger';
 import { toast } from 'sonner';
 import { usePermissions } from '@/hooks/usePermissions';
 
@@ -87,9 +89,33 @@ export function OrderDetailsDialog({
     if (!orderId || !newStatus || newStatus === order?.status) return;
 
     setIsUpdatingStatus(true);
+    const oldStatus = order?.status;
+    
     try {
+      // Update order status in database
       await orderService.updateOrderStatus(orderId, newStatus);
-      toast.success('Order status updated successfully');
+      
+      // Log the status update
+      await orderLogger.statusUpdated(orderId, oldStatus, newStatus);
+      
+      // Send email notification if order has shipping email
+      if (order?.shipping?.email) {
+        try {
+          await sendOrderStatusUpdateEmail({
+            orderId,
+            newStatus,
+            oldStatus,
+          });
+          toast.success('Order status updated and email notification sent');
+        } catch (emailError) {
+          // Log email error but don't fail the status update
+          console.error('Failed to send email notification:', emailError);
+          toast.success('Order status updated successfully (email notification failed)');
+        }
+      } else {
+        toast.success('Order status updated successfully');
+      }
+      
       await fetchOrderDetails();
       onStatusUpdated?.();
     } catch (error) {

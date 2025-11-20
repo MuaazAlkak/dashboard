@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { userService, AdminUser } from '@/lib/supabase';
+import { userLogger } from '@/lib/auditLogger';
 
 interface EditUserRoleDialogProps {
   open: boolean;
@@ -42,7 +43,12 @@ export function EditUserRoleDialog({
     setIsLoading(true);
 
     try {
+      const oldRole = user.role;
       await userService.updateUserRole(user.id, selectedRole);
+      
+      // Log the role update
+      await userLogger.roleUpdated(user.id, user.email, oldRole, selectedRole);
+      
       toast.success('User role updated successfully');
       onSuccess?.();
       onOpenChange(false);

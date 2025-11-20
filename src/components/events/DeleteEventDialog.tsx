@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Event, eventService } from '@/lib/supabase';
+import { eventLogger } from '@/lib/auditLogger';
 import { toast } from 'sonner';
 
 interface DeleteEventDialogProps {
@@ -32,6 +33,10 @@ export function DeleteEventDialog({
 
     setIsLoading(true);
     try {
+      // Log the deletion before deleting
+      const eventName = event.title?.en || event.title?.sv || event.title?.ar || 'Event';
+      await eventLogger.deleted(event.id, eventName, event);
+      
       await eventService.deleteEvent(event.id);
       toast.success('Event deleted successfully');
       onSuccess?.();

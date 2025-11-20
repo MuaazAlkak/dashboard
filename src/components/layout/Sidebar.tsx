@@ -6,6 +6,7 @@ import {
   Users,
   Calendar,
   Settings,
+  FileText,
   ChevronLeft
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -25,6 +26,7 @@ const navigation = [
   { name: 'nav.orders', href: '/orders', icon: ShoppingCart, permission: 'canViewOrders' },
   { name: 'nav.events', href: '/events', icon: Calendar, permission: 'canViewEvents' },
   { name: 'nav.users', href: '/users', icon: Users, permission: 'canViewUsers' },
+  { name: 'nav.logs', href: '/logs', icon: FileText, permission: 'canDeleteUsers' }, // Only super admin can delete users
   { name: 'nav.settings', href: '/settings', icon: Settings, permission: 'canViewSettings' },
 ];
 

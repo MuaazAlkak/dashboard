@@ -14,6 +14,7 @@ import Orders from "./pages/Orders";
 import Events from "./pages/Events";
 import Users from "./pages/Users";
 import Settings from "./pages/Settings";
+import Logs from "./pages/Logs";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
@@ -42,6 +43,7 @@ const App = () => (
                 <Route path="/orders" element={<Orders />} />
                 <Route path="/events" element={<Events />} />
                 <Route path="/users" element={<Users />} />
+                <Route path="/logs" element={<Logs />} />
                 <Route path="/settings" element={<Settings />} />
               </Route>
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

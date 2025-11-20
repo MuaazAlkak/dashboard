@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Event, eventService } from '@/lib/supabase';
+import { eventLogger } from '@/lib/auditLogger';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -125,10 +126,22 @@ export function EventFormDialog({
       };
 
       if (event) {
+        // Get current event data for logging
+        const currentEvent = await eventService.getEvent(event.id);
         await eventService.updateEvent(event.id, eventData);
+        
+        // Log the update
+        const eventName = eventData.title.en || eventData.title.sv || eventData.title.ar || 'Event';
+        await eventLogger.updated(event.id, eventName, currentEvent, eventData);
+        
         toast.success('Event updated successfully');
       } else {
-        await eventService.createEvent(eventData);
+        const newEvent = await eventService.createEvent(eventData);
+        
+        // Log the creation
+        const eventName = eventData.title.en || eventData.title.sv || eventData.title.ar || 'Event';
+        await eventLogger.created(newEvent.id, eventName, eventData);
+        
         toast.success('Event created successfully');
       }
 
