@@ -31,7 +31,8 @@ import { auditLogService, AuditLog } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useAuth } from '@/contexts/AuthContext';
-import { RevertLogDialog, DeleteLogDialog } from '@/components/logs';
+import { RevertLogDialog } from '@/components/logs/RevertLogDialog.tsx';
+import { DeleteLogDialog } from '@/components/logs/DeleteLogDialog.tsx';
 
 const getActionBadgeVariant = (action: string) => {
   switch (action) {
