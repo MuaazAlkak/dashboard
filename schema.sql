@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS products (
   slug TEXT UNIQUE NOT NULL,
   title JSONB NOT NULL DEFAULT '{"en": ""}',
   description JSONB NOT NULL DEFAULT '{"en": ""}',
-  price INTEGER NOT NULL CHECK (price >= 0),
+  price NUMERIC(10,2) NOT NULL CHECK (price >= 0),
   currency TEXT NOT NULL DEFAULT 'USD',
   stock INTEGER NOT NULL DEFAULT 0 CHECK (stock >= 0),
   category TEXT NOT NULL,

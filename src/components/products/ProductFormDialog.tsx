@@ -171,7 +171,7 @@ export function ProductFormDialog({
       }
 
       // Validate price
-      const price = parseInt(formData.get('price') as string);
+      const price = parseFloat(formData.get('price') as string);
       if (isNaN(price) || price < 0) {
         throw new Error('Invalid price. Please enter a valid number.');
       }
@@ -351,11 +351,11 @@ export function ProductFormDialog({
                 id="price"
                 name="price"
                 type="number"
-                placeholder="e.g., 299 for 299 SEK"
+                placeholder="e.g., 29.99 for 29.99 SEK"
                 defaultValue={product?.price}
                 required
                 min="0"
-                step="1"
+                step="0.01"
               />
             </div>
 
