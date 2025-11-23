@@ -380,11 +380,10 @@ export function ProductFormDialog({
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Clothing">Clothing</SelectItem>
+                  <SelectItem value="Flags">Flags</SelectItem>
+                  <SelectItem value="Scarves">Scarves</SelectItem>
                   <SelectItem value="Accessories">Accessories</SelectItem>
-                  <SelectItem value="Home Decor">Home Decor</SelectItem>
                   <SelectItem value="Traditional">Traditional</SelectItem>
-                  <SelectItem value="Crafts">Crafts</SelectItem>
                 </SelectContent>
               </Select>
             </div>

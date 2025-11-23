@@ -232,11 +232,10 @@ export default function Products() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{t('products.category')}</SelectItem>
-            <SelectItem value="Clothing">Clothing</SelectItem>
+            <SelectItem value="Flags">Flags</SelectItem>
+            <SelectItem value="Scarves">Scarves</SelectItem>
             <SelectItem value="Accessories">Accessories</SelectItem>
-            <SelectItem value="Home Decor">Home Decor</SelectItem>
             <SelectItem value="Traditional">Traditional</SelectItem>
-            <SelectItem value="Crafts">Crafts</SelectItem>
           </SelectContent>
         </Select>
       </div>
