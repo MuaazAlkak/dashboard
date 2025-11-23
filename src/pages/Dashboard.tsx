@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { DashboardStats } from '@/components/dashboard/DashboardStats';
+import { HeroImageSection } from '@/components/dashboard/HeroImageSection';
 
 export default function Dashboard() {
   const { t } = useLanguage();
@@ -16,6 +17,9 @@ export default function Dashboard() {
 
       {/* Stats Grid */}
       <DashboardStats />
+
+      {/* Hero Image Section */}
+      <HeroImageSection />
 
       {/* Recent Activity */}
       <div className="grid gap-6 lg:grid-cols-2">

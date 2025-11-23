@@ -734,3 +734,69 @@ export const auditLogService = {
     return data as AuditLog;
   },
 };
+
+// Hero Image operations
+export const heroImageService = {
+  // Upload hero image to storage
+  async uploadImage(file: File) {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+    const filePath = `${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('HeroImage')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false,
+      });
+
+    if (uploadError) throw uploadError;
+
+    const { data } = supabase.storage
+      .from('HeroImage')
+      .getPublicUrl(filePath);
+
+    return data.publicUrl;
+  },
+
+  // List all hero images
+  async listImages() {
+    const { data, error } = await supabase.storage
+      .from('HeroImage')
+      .list('', {
+        limit: 100,
+        offset: 0,
+        sortBy: { column: 'created_at', order: 'desc' },
+      });
+
+    if (error) throw error;
+
+    // Get public URLs for all images
+    const images = data.map((file) => {
+      const { data: urlData } = supabase.storage
+        .from('HeroImage')
+        .getPublicUrl(file.name);
+      return {
+        name: file.name,
+        url: urlData.publicUrl,
+        created_at: file.created_at,
+      };
+    });
+
+    return images;
+  },
+
+  // Delete hero image from storage
+  async deleteImage(fileName: string) {
+    try {
+      const { error } = await supabase.storage
+        .from('HeroImage')
+        .remove([fileName]);
+
+      if (error) throw error;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Failed to delete image: ${errorMessage}`);
+    }
+  },
+};

@@ -82,6 +82,17 @@ CREATE POLICY "Authenticated users can upload" ON storage.objects FOR INSERT WIT
 CREATE POLICY "Authenticated users can update" ON storage.objects FOR UPDATE USING (bucket_id = 'product-images');
 CREATE POLICY "Authenticated users can delete" ON storage.objects FOR DELETE USING (bucket_id = 'product-images');
 
+-- Create storage bucket for hero images
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('HeroImage', 'HeroImage', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Storage policy for hero images
+CREATE POLICY "Public Access HeroImage" ON storage.objects FOR SELECT USING (bucket_id = 'HeroImage');
+CREATE POLICY "Authenticated users can upload HeroImage" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'HeroImage');
+CREATE POLICY "Authenticated users can update HeroImage" ON storage.objects FOR UPDATE USING (bucket_id = 'HeroImage');
+CREATE POLICY "Authenticated users can delete HeroImage" ON storage.objects FOR DELETE USING (bucket_id = 'HeroImage');
+
 -- Function to automatically update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
